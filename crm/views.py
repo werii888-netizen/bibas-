@@ -11,6 +11,8 @@ from django.views.decorators.http import require_POST
 from .forms import ClientForm, OrderForm, PaymentForm, StatusForm
 from .models import Client, Event, Order
 from .services import change_status, record_payment
+from workshop.forms import ApprovalForm
+from workshop.models import PriceApproval
 
 @login_required
 @permission_required("crm.view_order", raise_exception=True)
@@ -78,6 +80,8 @@ def order_detail(request, pk):
     return render(request, "crm/order.html", {
         "order": order, "status_form": StatusForm(initial={"version": order.version}),
         "payment_form": PaymentForm(initial={"token": uuid.uuid4()}),
+        "price_approval": PriceApproval.objects.filter(order=order, amount=order.price).select_related("actor").first(),
+        "approval_form": ApprovalForm(initial={"version": order.version}),
     })
 
 @login_required

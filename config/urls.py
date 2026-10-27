@@ -7,4 +7,5 @@ urlpatterns = [
     path("accounts/login/", auth.LoginView.as_view(), name="login"),
     path("accounts/logout/", auth.LogoutView.as_view(), name="logout"),
     path("", include("crm.urls")),
+    path("", include("workshop.urls")),
 ]
