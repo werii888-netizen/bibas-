@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<div class="heading"><div><p class="eyebrow">ЮВЕЛИРНАЯ МАСТЕРСКАЯ</p><h1>Заказы</h1><p class="muted">Работы, сроки и ответственность — в одном месте</p></div>{% if perms.crm.add_order %}<a class="button" href="{% url 'order-create' %}">+ Новый заказ</a>{% endif %}</div>
+<form class="filters card" method="get"><label>Поиск<input name="q" value="{{ query }}" placeholder="Номер, клиент, телефон, изделие"></label>
+<label>Статус<select name="status"><option value="">Все статусы</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label class="check"><input type="checkbox" name="overdue" value="1" {% if request.GET.overdue == '1' %}checked{% endif %}> Просроченные</label><button>Найти</button><a href="/">Сбросить</a></form>
+<div class="orders">{% for order in page %}<a class="card order-row" href="{% url 'order' order.pk %}">
+<div><span class="muted">№ {{ order.pk }}</span><h2>{{ order.item }}</h2><p>{{ order.client.name }}</p></div>
+<div><span class="badge">{{ order.get_status_display }}</span><p>{{ order.master|default:"Мастер не назначен" }}</p></div>
+<div><small>Срок</small><p {% if order.due_date < today and order.status != 'delivered' and order.status != 'cancelled' %}class="late"{% endif %}>{{ order.due_date|date:"d.m.Y" }}</p><strong>{{ order.price }} ₽</strong></div></a>
+{% empty %}<div class="card empty"><h2>Заказов пока нет</h2><p>Добавьте клиента и примите первый заказ или измените фильтры поиска.</p>{% if perms.crm.add_client %}<a href="{% url 'client-create' %}">Добавить клиента</a>{% endif %}</div>{% endfor %}</div>
+{% include 'crm/pagination.html' %}{% endblock %}

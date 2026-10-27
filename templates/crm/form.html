@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<div class="heading"><h1>{{ title }}</h1><a href="/">К заказам</a></div><section class="card"><form method="post" class="entry">{% csrf_token %}{{ form.as_p }}<button>Сохранить</button></form></section>{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% block content %}
+<a href="/">← Все заказы</a><div class="heading"><div><p class="eyebrow">ЗАКАЗ № {{ order.pk }}</p><h1>{{ order.item }}</h1></div><span class="badge">{{ order.get_status_display }}</span></div>
+<div class="columns"><section class="card"><h2>Карточка изделия</h2><dl>
+<dt>Клиент</dt><dd>{{ order.client.name }} · {{ order.client.phone }}</dd>
+<dt>Работа</dt><dd>{{ order.get_kind_display }} · {{ order.work_description|linebreaksbr }}</dd>
+<dt>Металл / проба</dt><dd>{{ order.material|default:"Не указан" }}</dd>
+<dt>Вес</dt><dd>{{ order.weight|default_if_none:"Не указан" }} г</dd>
+<dt>Камни</dt><dd>{{ order.stones|default:"Не указаны"|linebreaksbr }}</dd>
+<dt>Состояние при приёме</dt><dd>{{ order.condition|linebreaksbr }}</dd>
+<dt>Мастер</dt><dd>{{ order.master|default:"Не назначен" }}</dd>
+<dt>Срок</dt><dd>{{ order.due_date|date:"d.m.Y" }}</dd></dl>
+{% if perms.crm.change_order %}<h2>Изменить статус</h2><form method="post" action="{% url 'status-update' order.pk %}">{% csrf_token %}{{ status_form.as_p }}<button>Обновить статус</button></form>{% endif %}</section>
+<section class="card"><h2>Расчёты</h2><dl class="money"><dt>Стоимость</dt><dd>{{ order.price }} ₽</dd><dt>Получено с учётом возвратов</dt><dd>{{ order.paid }} ₽</dd><dt>Осталось оплатить</dt><dd><strong>{{ order.balance }} ₽</strong></dd></dl>
+{% if perms.crm.record_payment %}<h2>Оплата / возврат</h2><form method="post" action="{% url 'payment-create' order.pk %}">{% csrf_token %}{{ payment_form.as_p }}<button>Записать операцию</button></form>{% endif %}
+{% for payment in order.payments.all %}<div class="event"><strong>{{ payment.get_kind_display }} · {{ payment.amount }} ₽</strong><p>{{ payment.note }}</p><small>{{ payment.created_at|date:"d.m.Y H:i" }} · {{ payment.actor }}</small></div>{% endfor %}</section></div>
+<section class="card"><h2>История заказа</h2>{% for event in order.events.all %}<div class="event"><p>{{ event.message }}</p><small>{{ event.created_at|date:"d.m.Y H:i" }} · {{ event.actor }}</small></div>{% empty %}<p>Событий пока нет.</p>{% endfor %}</section>{% endblock %}
