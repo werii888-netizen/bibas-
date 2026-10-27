@@ -12,7 +12,7 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
-    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles", "crm",
+    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles", "crm", "workshop",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -64,7 +64,7 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/start/"
 LOGOUT_REDIRECT_URL = LOGIN_URL
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 28800
@@ -79,3 +79,9 @@ if os.getenv("TRUST_PROXY_HTTPS") == "1":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CSRF_TRUSTED_ORIGINS = [x for x in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if x]
 X_FRAME_OPTIONS = "DENY"
+
+# AI is opt-in. Model IDs must be configured for the API account.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_TEXT_MODEL = os.getenv("OPENAI_TEXT_MODEL", "")
+OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "")
+AI_DAILY_LIMIT = int(os.getenv("AI_DAILY_LIMIT", "20"))

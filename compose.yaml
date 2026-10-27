@@ -1,3 +1,16 @@
+x-app-env: &app-env
+  POSTGRES_HOST: db
+  POSTGRES_DB: bibas
+  POSTGRES_USER: bibas
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set hostname}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Set HTTPS origin}
+  TRUST_PROXY_HTTPS: ${TRUST_PROXY_HTTPS:-0}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_TEXT_MODEL: ${OPENAI_TEXT_MODEL:-}
+  OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-}
+  AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-20}
 services:
   db:
     image: postgres:17
@@ -17,15 +30,16 @@ services:
     build: .
     ports:
       - "127.0.0.1:8000:8000"
-    environment:
-      POSTGRES_HOST: db
-      POSTGRES_DB: bibas
-      POSTGRES_USER: bibas
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set hostname}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Set HTTPS origin}
-      TRUST_PROXY_HTTPS: ${TRUST_PROXY_HTTPS:-0}
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  worker:
+    build: .
+    profiles: ["ai"]
+    command: ["python", "manage.py", "run_ai_jobs"]
+    environment: *app-env
     depends_on:
       db:
         condition: service_healthy

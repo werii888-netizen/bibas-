@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block content %}
+<div class="heading"><div><p class="eyebrow">ДИЗАЙН-СТУДИЯ</p><h1>Библиотека изделий</h1><p>Карточки, варианты и AI-эскизы. Каждый апгрейд сохраняется отдельно.</p></div>{% if perms.workshop.add_design %}<a class="button" href="{% url 'design-create' %}">+ Изделие</a>{% endif %}</div>
+<form class="filters card"><label>Название<input name="q" value="{{ query }}"></label><button>Найти</button></form>
+<div class="design-grid">{% for design in page %}<a class="card" href="{% url 'design' design.pk %}"><small>№ {{ design.pk }}{% if design.parent_id %} · вариант № {{ design.parent_id }}{% endif %}</small><h2>{{ design.title }}</h2><p>{{ design.get_kind_display }} · {{ design.get_color_display }} золото {{ design.fineness }}</p><p>{{ design.style }}</p></a>{% empty %}<section class="card">Добавьте первое изделие и опишите его конфигурацию.</section>{% endfor %}</div>
+{% include 'crm/pagination.html' %}{% endblock %}
