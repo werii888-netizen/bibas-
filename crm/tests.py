@@ -65,10 +65,11 @@ class WorkflowTests(Fixtures, TestCase):
         with self.assertRaises(ValidationError):
             change_status(self.order.pk, self.user, "cancelled", 0)
         change_status(self.order.pk, self.user, "ready", 1)
+        self.pay("1000.10")
         change_status(self.order.pk, self.user, "delivered", 2)
         with self.assertRaises(ValidationError):
             change_status(self.order.pk, self.user, "work", 3)
-        self.assertEqual(Event.objects.count(), 3)
+        self.assertEqual(Event.objects.count(), 4)
 
     def test_money_and_duplicate_submission(self):
         token = uuid.uuid4()
@@ -149,3 +150,106 @@ class ConcurrentPaymentTests(Fixtures, TransactionTestCase):
             results = list(pool.map(lambda _: attempt(), range(2)))
         self.assertEqual(sorted(results), [False, True])
         self.assertEqual(Payment.objects.count(), 1)
+
+class RegressionTests(Fixtures, TestCase):
+    def setUp(self):
+        self.setup_records()
+        self.client.force_login(self.user)
+        change_status(self.order.pk, self.user, "work", 0)
+        change_status(self.order.pk, self.user, "ready", 1)
+
+    def test_delivery_requires_full_payment_without_side_effects(self):
+        for amount in ["0", "1000.09"]:
+            with self.subTest(paid=amount):
+                if amount != "0":
+                    self.pay(amount)
+                before = Event.objects.count()
+                with self.assertRaisesMessage(ValidationError, "Выдача запрещена"):
+                    change_status(self.order.pk, self.user, "delivered", 2)
+                self.order.refresh_from_db()
+                self.assertEqual(self.order.status, "ready")
+                self.assertEqual(self.order.version, 2)
+                self.assertEqual(Event.objects.count(), before)
+        self.pay("0.01")
+        change_status(self.order.pk, self.user, "delivered", 2)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "delivered")
+        self.assertEqual(self.order.balance, Decimal("0.00"))
+
+    def test_refund_before_delivery_restores_debt(self):
+        self.pay("1000.10")
+        self.pay("0.01", "refund")
+        with self.assertRaisesMessage(ValidationError, "Выдача запрещена"):
+            change_status(self.order.pk, self.user, "delivered", 2)
+
+    def test_zero_price_order_can_be_delivered(self):
+        self.order.price = Decimal("0.00")
+        self.order.save(update_fields=["price"])
+        change_status(self.order.pk, self.user, "delivered", 2)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "delivered")
+
+    def test_direct_post_cannot_deliver_with_debt(self):
+        response = self.client.post(
+            f"/orders/{self.order.pk}/status/",
+            {"status": "delivered", "version": 2}, follow=True,
+        )
+        self.assertContains(response, "Выдача запрещена")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "ready")
+
+    def creation_data(self):
+        return {
+            "client": self.customer.pk, "kind": "repair", "item": "Original",
+            "material": "Gold 585", "weight": "1.200", "stones": "None",
+            "condition": "Used", "work_description": "Repair", "master": self.user.pk,
+            "due_date": timezone.localdate().isoformat(), "price": "20.10",
+            "creation_key": str(uuid.uuid4()),
+        }
+
+    def test_reused_key_rejects_each_changed_field_and_preserves_form(self):
+        other = Client.objects.create(name="Other", phone="456")
+        changes = {
+            "client": other.pk, "kind": "custom", "item": "Changed item",
+            "material": "Silver", "weight": "1.201", "stones": "Ruby",
+            "condition": "Changed condition", "work_description": "New work",
+            "master": "", "due_date": (timezone.localdate() + timedelta(days=1)).isoformat(),
+            "price": "20.11",
+        }
+        for field, value in changes.items():
+            with self.subTest(field=field):
+                data = self.creation_data()
+                first = self.client.post("/orders/new/", data)
+                self.assertEqual(first.status_code, 302)
+                before = (Order.objects.count(), Event.objects.count())
+                changed = {**data, field: value}
+                response = self.client.post("/orders/new/", changed)
+                self.assertEqual(response.status_code, 409)
+                self.assertContains(response, "Данные отличаются", status_code=409)
+                self.assertEqual(str(response.context["form"][field].value()), str(value))
+                self.assertEqual((Order.objects.count(), Event.objects.count()), before)
+                original = Order.objects.get(creation_key=data["creation_key"])
+                self.assertEqual(original.item, "Original")
+                self.assertEqual(original.price, Decimal("20.10"))
+
+    def test_reused_key_checks_actor_and_compares_normalized_values(self):
+        data = self.creation_data()
+        first = self.client.post("/orders/new/", data)
+        equivalent = {**data, "price": "20.1", "weight": "1.2"}
+        repeat = self.client.post("/orders/new/", equivalent)
+        self.assertEqual(repeat.status_code, 302)
+        self.assertEqual(first["Location"], repeat["Location"])
+        other = get_user_model().objects.create_superuser("other", password="test")
+        self.client.force_login(other)
+        conflict = self.client.post("/orders/new/", data)
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(Order.objects.filter(creation_key=data["creation_key"]).count(), 1)
+
+    def test_changed_order_can_be_created_with_a_new_key(self):
+        data = self.creation_data()
+        first = self.client.post("/orders/new/", data)
+        changed = {**data, "creation_key": str(uuid.uuid4()), "item": "New item"}
+        second = self.client.post("/orders/new/", changed)
+        self.assertEqual(second.status_code, 302)
+        self.assertNotEqual(first["Location"], second["Location"])
+        self.assertEqual(Order.objects.filter(item="New item").count(), 1)

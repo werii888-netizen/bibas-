@@ -63,8 +63,11 @@ def order_create(request):
             if created:
                 Event.objects.create(order=order, actor=request.user, message="Заказ принят")
             elif order.created_by_id != request.user.pk:
-                form.add_error(None, "Идентификатор заказа уже использован.")
-                return render(request, "crm/form.html", {"form": form, "title": "Новый заказ"}, status=400)
+                form.add_error(None, "Идентификатор заказа уже использован. Откройте новую форму заказа.")
+                return render(request, "crm/form.html", {"form": form, "title": "Новый заказ"}, status=409)
+            elif any(getattr(order, field) != value for field, value in defaults.items()):
+                form.add_error(None, "Данные отличаются от уже созданного заказа. Изменения не сохранены. Для нового заказа откройте новую форму.")
+                return render(request, "crm/form.html", {"form": form, "title": "Новый заказ", "existing_order": order}, status=409)
         return redirect("order", pk=order.pk)
     return render(request, "crm/form.html", {"form": form, "title": "Новый заказ"})
 

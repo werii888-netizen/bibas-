@@ -19,6 +19,8 @@ def change_status(order_id, actor, status, version):
         raise ValidationError("Заказ уже изменён другим сотрудником. Обновите страницу.")
     if status not in TRANSITIONS[order.status]:
         raise ValidationError("Недопустимый переход статуса.")
+    if status == Order.Status.DELIVERED and order.balance != 0:
+        raise ValidationError("Выдача запрещена: заказ должен быть полностью оплачен.")
     old = order.get_status_display()
     # Compare-and-swap also protects against stale writes on development SQLite.
     changed = Order.objects.filter(pk=order.pk, version=version).update(status=status, version=version + 1)
