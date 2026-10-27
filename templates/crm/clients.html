@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block content %}<div class="heading"><h1>Клиенты</h1>{% if perms.crm.add_client %}<a class="button" href="{% url 'client-create' %}">+ Новый клиент</a>{% endif %}</div>
+<form class="filters card"><label>Имя или телефон<input name="q" value="{{ query }}"></label><button>Найти</button></form>
+{% for client in page %}<section class="card"><h2>{{ client.name }}</h2><p>{{ client.phone }}</p><p>{{ client.notes|linebreaksbr }}</p><a href="/?q={{ client.phone|urlencode }}">Заказы клиента</a></section>{% empty %}<section class="card">Клиенты не найдены.</section>{% endfor %}
+{% include 'crm/pagination.html' %}{% endblock %}
