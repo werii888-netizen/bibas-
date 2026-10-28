@@ -1,6 +1,8 @@
+from .analytics_views import analytics_report
 from django.urls import path
 from . import views
 urlpatterns = [
+    path("analytics/", analytics_report, name="analytics-report"),
     path("", views.orders, name="orders"),
     path("clients/", views.clients, name="clients"),
     path("clients/new/", views.client_create, name="client-create"),
