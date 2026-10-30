@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Аналитика заказов</h1>
+<p><a href="{% url 'orders' %}">Вернуться к заказам</a></p>
+<section class="card">
+<p>Дата расчёта: {{ report.as_of }}. Часовой пояс: Europe/Moscow.</p>
+<p>Все заказы, включая отменённые. Текущее состояние, без фильтра периода.</p>
+<p>{{ report.message }}</p>
+</section>
+
+{% if report.metrics_allowed %}
+<section class="card">
+<h2>Показатели</h2>
+<dl>
+<dt>Количество заказов</dt>
+<dd>{{ report.metrics.order_count }}</dd>
+<dt>Стоимость заказов — не выручка</dt>
+<dd>{{ report.metrics.total_order_value }} &#8381;</dd>
+<dt>Активные заказы без мастера</dt>
+<dd>{{ report.metrics.unassigned_active_count }}</dd>
+<dt>Просроченные активные заказы</dt>
+<dd>{{ report.metrics.overdue_active_count }}</dd>
+</dl>
+<p>Активные: принят, согласование, в работе.
+Готовые заказы не входят в просрочку этого отчёта.</p>
+</section>
+<section class="card">
+<h2>По статусам</h2>
+<dl>
+<dt>Принят</dt><dd>{{ report.metrics.orders_by_status.accepted }}</dd>
+<dt>Согласование</dt><dd>{{ report.metrics.orders_by_status.approval }}</dd>
+<dt>В работе</dt><dd>{{ report.metrics.orders_by_status.work }}</dd>
+<dt>Готов</dt><dd>{{ report.metrics.orders_by_status.ready }}</dd>
+<dt>Выдан</dt><dd>{{ report.metrics.orders_by_status.delivered }}</dd>
+<dt>Отменён</dt><dd>{{ report.metrics.orders_by_status.cancelled }}</dd>
+</dl>
+</section>
+{% endif %}
+
+{% if report.errors %}
+<section class="card">
+<h2>Ошибки данных</h2>
+{% for issue in report.errors %}
+<p>Строка {{ issue.row }} · заказ
+{{ issue.order_id|default_if_none:"не определён" }} · {{ issue.code }}</p>
+{% endfor %}
+</section>
+{% endif %}
+
+{% if report.warnings %}
+<section class="card">
+<h2>Предупреждения</h2>
+{% for issue in report.warnings %}
+<p>Заказ {{ issue.order_id }}: активный заказ без мастера.</p>
+{% endfor %}
+</section>
+{% endif %}
+{% endblock %}
