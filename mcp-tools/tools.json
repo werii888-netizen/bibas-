@@ -1,0 +1,44 @@
+{
+  "name": "bibas-crm-tools",
+  "version": "0.1.0",
+  "description": "Инструменты для взаимодействия MCP-агента с CRM ювелирной мастерской BIBAS.",
+  "tools": [
+    {
+      "name": "health_check",
+      "endpoint": "/api/v1/agent/health/",
+      "description": "Проверяет доступность CRM и базовое состояние сервисов (БД, очередь задач). Возвращает статус и простые метрики.",
+      "input": {
+        "type": "object",
+        "properties": {
+          "verbose": {
+            "type": "boolean",
+            "description": "Если true, возвращает расширенную информацию по каждому сервису.",
+            "default": false
+          }
+        },
+        "required": []
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Общий статус: ok, degraded, error."
+          },
+          "services": {
+            "type": "object",
+            "description": "Статус отдельных сервисов."
+          },
+          "metrics": {
+            "type": "object",
+            "description": "Базовые метрики CRM."
+          },
+          "message": {
+            "type": "string",
+            "description": "Человекочитаемое сообщение."
+          }
+        }
+      }
+    }
+  ]
+}
