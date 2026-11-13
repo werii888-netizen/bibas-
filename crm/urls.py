@@ -2,6 +2,7 @@ from .analytics_views import analytics_report
 from django.urls import path
 from . import views
 urlpatterns = [
+    path("api/v1/agent/health/", views.agent_health, name="agent-health"),
     path("analytics/", analytics_report, name="analytics-report"),
     path("", views.orders, name="orders"),
     path("clients/", views.clients, name="clients"),

@@ -5,14 +5,28 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from .forms import ClientForm, OrderForm, PaymentForm, StatusForm
 from .models import Client, Event, Order
 from .services import change_status, record_payment
 from workshop.forms import ApprovalForm
 from workshop.models import PriceApproval
+
+@require_GET
+def agent_health(request):
+    """Public liveness stub; does not inspect CRM data or service health."""
+    verbose = request.GET.get("verbose", "false").lower()
+    if verbose not in ("true", "false"):
+        return JsonResponse({"message": "verbose must be true or false."}, status=400)
+    return JsonResponse({
+        "status": "ok",
+        "services": {"database": "not_checked", "task_queue": "not_checked"} if verbose == "true" else {},
+        "metrics": {},
+        "message": "Health check stub: HTTP handler is available; services are not checked.",
+    })
 
 @login_required
 @permission_required("crm.view_order", raise_exception=True)
